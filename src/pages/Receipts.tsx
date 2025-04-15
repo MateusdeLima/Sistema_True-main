@@ -51,6 +51,7 @@ function Receipts() {
     getEmployeeById,
     getReceiptById,
     updateReceipt,
+    updateReceiptItemPrice,
   } = useData();
 
   // Estado inicial do formulário
@@ -72,6 +73,9 @@ function Receipts() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [productQuery, setProductQuery] = useState('');
   const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
+  // Estado para edição de preço de item
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemPrice, setEditingItemPrice] = useState<number>(0);
 
   // Listas filtradas computadas
   const filteredProducts = useMemo(() => 
@@ -277,6 +281,23 @@ function Receipts() {
     setFormData(initialFormData);
   };
 
+  // Função para iniciar edição
+  const startEditItemPrice = (itemId: string, currentPrice: number) => {
+    setEditingItemId(itemId);
+    setEditingItemPrice(currentPrice);
+  };
+
+  // Função para salvar edição
+  const saveEditItemPrice = async (itemId: string) => {
+    try {
+      await updateReceiptItemPrice(itemId, editingItemPrice);
+      setEditingItemId(null);
+      toast.success('Valor do produto atualizado!');
+    } catch (error) {
+      toast.error('Erro ao atualizar valor do produto');
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -351,6 +372,51 @@ function Receipts() {
                   <p className="text-sm">
                     Garantia: {receipt.warranty_duration_months} meses
                   </p>
+                )}
+                {/* ITENS DO RECIBO E EDIÇÃO DE PREÇO */}
+                {receipt.receipt_items && receipt.receipt_items.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-2">Produtos:</h4>
+                    <ul className="space-y-2">
+                      {receipt.receipt_items.map(item => (
+                        <li key={item.id} className="flex items-center gap-2">
+                          <span className="flex-1">
+                            {item.products?.name || 'Produto'} (Qtd: {item.quantity})
+                          </span>
+                          {editingItemId === item.id ? (
+                            <>
+                              <input
+                                type="number"
+                                className="border rounded px-2 py-1 w-24"
+                                value={editingItemPrice}
+                                min={0}
+                                onChange={e => setEditingItemPrice(Number(e.target.value))}
+                              />
+                              <button
+                                className="text-green-600 font-bold px-2"
+                                onClick={() => saveEditItemPrice(item.id)}
+                                type="button"
+                              >Salvar</button>
+                              <button
+                                className="text-gray-500 px-2"
+                                onClick={() => setEditingItemId(null)}
+                                type="button"
+                              >Cancelar</button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-mono">{formatCurrency(item.price)}</span>
+                              <button
+                                className="text-blue-500 hover:underline ml-2"
+                                onClick={() => startEditItemPrice(item.id, item.price)}
+                                type="button"
+                              >Editar valor</button>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             </div>

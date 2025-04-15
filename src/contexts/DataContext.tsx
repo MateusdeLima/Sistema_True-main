@@ -62,6 +62,7 @@ interface DataContextType {
   deleteEmployee: (id: string) => Promise<void>;
   searchEmployees: (query: string) => Employee[];
   getEmployeeById: (id: string) => Employee | undefined;
+  updateReceiptItemPrice: (itemId: string, newPrice: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -624,6 +625,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const getEmployeeById = (id: string) =>
     employees.find((e) => e.id === id);
 
+  // Atualizar valor de um item do recibo
+  const updateReceiptItemPrice = async (itemId: string, newPrice: number) => {
+    const { error } = await supabase
+      .from('receipt_items')
+      .update({ price: newPrice })
+      .eq('id', itemId);
+    if (error) throw error;
+    await fetchReceipts();
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -653,6 +664,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         deleteEmployee,
         searchEmployees,
         getEmployeeById,
+        updateReceiptItemPrice,
       }}
     >
       {children}
