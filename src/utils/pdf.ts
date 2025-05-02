@@ -246,13 +246,14 @@ export async function generateReceiptPDF(
     // Restaurar opacidade para o logo principal
     doc.setGState(new (doc as any).GState({ opacity: 1 }));
 
-    // Adicionar logo no topo - reduzido e mais próximo do conteúdo
-    const logoWidth = 4; // 4cm
+    // Aumentar tamanho do logo para 8cm (era 4cm)
+    const logoWidth = 8;
     const logoHeight = (logoImage.height * logoWidth) / logoImage.width;
     const logoX = (pageWidth - logoWidth) / 2;
     doc.addImage(logoImage, 'PNG', logoX, marginTop, logoWidth, logoHeight);
 
-    startY = marginTop + logoHeight + 0.5;
+    // Ajustar o espaçamento após o logo para compensar o tamanho maior
+    startY = marginTop + logoHeight + 0.8;
 
     // Continuar com o resto do recibo com espaçamentos reduzidos
     doc.setFontSize(10);
