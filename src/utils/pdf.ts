@@ -253,7 +253,7 @@ export async function generateReceiptPDF(
     doc.addImage(logoImage, 'PNG', logoX, marginTop, logoWidth, logoHeight);
 
     // Diminuir o espaçamento após o logo de 0.8 para 0.4
-    startY = marginTop + logoHeight + 0.4;
+    startY = marginTop + logoHeight + 0.2;
 
     // Continuar com o resto do recibo com espaçamentos reduzidos
     doc.setFontSize(10);
