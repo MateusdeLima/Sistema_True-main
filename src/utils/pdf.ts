@@ -2,8 +2,6 @@ import { jsPDF } from 'jspdf';
 import { formatCurrency, formatDate } from './notifications';
 import type { Database } from '../types/database.types';
 import { PDFDocument } from 'pdf-lib';
-import fs from 'fs';
-import path from 'path';
 
 type Receipt = Database['public']['Tables']['receipts']['Row'];
 
@@ -85,7 +83,6 @@ function generateBasicReceipt(doc: jsPDF, receipt: Receipt, customerName: string
   const marginLeft = 3; // 3cm margem esquerda
   const marginRight = 2; // 2cm margem direita
   const marginTop = 2; // 2cm margem superior
-  const marginBottom = 2; // 2cm margem inferior
 
   let startY = marginTop;
 
@@ -225,7 +222,6 @@ export async function generateReceiptPDF(
   const marginLeft = 3; // 3cm margem esquerda
   const marginRight = 2; // 2cm margem direita
   const marginTop = 2; // 2cm margem superior
-  const marginBottom = 2; // 2cm margem inferior
   
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();

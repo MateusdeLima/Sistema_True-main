@@ -19,6 +19,7 @@ type BaseReceiptItem = Database['public']['Tables']['receipt_items']['Row'];
 type Employee = Database['public']['Tables']['employees']['Row'];
 
 interface ReceiptItem extends BaseReceiptItem {
+  imei?: string;
   type?: 'novo' | 'seminovo';
   manual_cost?: number;
 }

@@ -23,13 +23,6 @@ interface FormItem {
   manualCost?: number;
 }
 
-interface PrintableProduct {
-  name: string;
-  quantity: number;
-  price: number;
-  imei?: string;
-}
-
 interface ReceiptFormData {
   customerId: string;
   employeeId: string;
@@ -55,9 +48,6 @@ function Receipts() {
     addReceipt,
     deleteReceipt,
     searchProducts,
-    getCustomerById,
-    getProductById,
-    getEmployeeById,
     getReceiptById,
     updateReceipt,
     updateReceiptItemPrice,
@@ -278,7 +268,7 @@ function Receipts() {
     }
     const items = receiptData.items;
     const receiptProducts = await Promise.all(items.map(async (item: ReceiptItem) => {
-      const product = getProductById(item.product_id);
+      const product = products.find(p => p.id === item.product_id);
       if (!product) return null;
       return {
         name: product.name,
@@ -503,10 +493,11 @@ function Receipts() {
                   <div className="mt-4">
                     <h4 className="font-semibold mb-2">Produtos:</h4>
                     <ul className="space-y-2">
-                      {receipt.receipt_items.map(item => (
+                      {receipt.receipt_items.map((item: ReceiptItem) => (
                         <li key={item.id} className="flex items-center gap-2">
                           <span className="flex-1">
                             {item.products?.name || 'Produto'} (Qtd: {item.quantity})
+                            {item.imei && <span> - IMEI: {item.imei}</span>}
                           </span>
                           {editingItemId === item.id ? (
                             <>
