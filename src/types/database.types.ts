@@ -76,6 +76,7 @@ export interface Database {
           product_id: string
           quantity: number
           price: number
+          imei: string | null
         }
         Insert: Omit<Database['public']['Tables']['receipt_items']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['receipt_items']['Row']>

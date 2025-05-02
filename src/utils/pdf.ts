@@ -141,7 +141,7 @@ function generateBasicReceipt(doc: jsPDF, receipt: Receipt, customerName: string
   products.forEach((item) => {
     doc.text(item.name, colItem, startY);
     if (item.imei) {
-      doc.text(item.imei, colIMEI, startY);
+      doc.text(item.imei, colIMEI, startY); // Removido o prefixo "IMEI: " para melhor formatação
     }
     doc.text(item.quantity.toString(), colQtd, startY);
     doc.text(formatCurrency(item.price), colPreco, startY);
@@ -304,7 +304,7 @@ export async function generateReceiptPDF(
     products.forEach((item) => {
       doc.text(item.name, colItem, startY);
       if (item.imei) {
-        doc.text(item.imei, colIMEI, startY);
+        doc.text(item.imei, colIMEI, startY); // Removido o prefixo "IMEI: " para melhor formatação
       }
       doc.text(item.quantity.toString(), colQtd, startY);
       doc.text(formatCurrency(item.price), colPreco, startY);

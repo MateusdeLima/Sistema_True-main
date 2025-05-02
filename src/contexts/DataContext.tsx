@@ -135,6 +135,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           product_id,
           quantity,
           price,
+          imei,
           type,
           manual_cost,
           products (
@@ -313,7 +314,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     try {
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Criar o recibo com employee_id e created_by corretos
+      // Criar o recibo
       const { data: receipt, error: receiptError } = await supabase
         .from('receipts')
         .insert([{
@@ -330,60 +331,39 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select()
         .single();
 
-      if (receiptError) {
-        console.error('Erro ao adicionar recibo:', receiptError);
+      if (receiptError) throw receiptError;
+
+      // Adicionar os itens do recibo com IMEI
+      const { data: items, error: itemsError } = await supabase
+        .from('receipt_items')
+        .insert(
+          receiptItems.map(item => ({
+            receipt_id: receipt.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+            imei: item.imei, // Incluindo o IMEI
+            type: item.type,
+            manual_cost: item.manual_cost
+          }))
+        )
+        .select();
+
+      if (itemsError) {
+        console.error('Erro ao adicionar itens do recibo:', itemsError);
+        // Deletar o recibo se houver erro ao adicionar os itens
+        await supabase.from('receipts').delete().eq('id', receipt.id);
         return null;
       }
 
-      if (receipt) {
-        // Adicionar os itens do recibo
-        const { data: items, error: itemsError } = await supabase
-          .from('receipt_items')
-          .insert(
-            receiptItems.map(item => ({
-              receipt_id: receipt.id,
-              product_id: item.product_id,
-              quantity: item.quantity,
-              price: item.price,
-              type: item.type,
-              manual_cost: item.type === 'seminovo' ? item.manual_cost : null,
-              imei: item.imei,
-            }))
-          )
-          .select(`
-            id,
-            product_id,
-            quantity,
-            price,
-            type,
-            manual_cost,
-            products (
-              id,
-              name,
-              code,
-              price,
-              memory,
-              color
-            )
-          `);
+      const completeReceipt = {
+        ...receipt,
+        receipt_items: items
+      };
 
-        if (itemsError) {
-          console.error('Erro ao adicionar itens do recibo:', itemsError);
-          // Deletar o recibo se houver erro ao adicionar os itens
-          await supabase.from('receipts').delete().eq('id', receipt.id);
-          return null;
-        }
-
-        const completeReceipt = {
-          ...receipt,
-          receipt_items: items
-        };
-
-        // Atualizar o estado local com o recibo completo
-        setReceipts(prev => [completeReceipt, ...prev]);
-        return completeReceipt;
-      }
-      return null;
+      // Atualizar o estado local com o recibo completo
+      setReceipts(prev => [completeReceipt, ...prev]);
+      return completeReceipt;
     } catch (error) {
       console.error('Erro ao adicionar recibo:', error);
       return null;
@@ -426,40 +406,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const getReceiptById = async (id: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: receiptData, error: receiptError } = await supabase
         .from('receipts')
         .select(`
           *,
-          customers (id, full_name, email, phone),
+          customers (
+            id, 
+            full_name, 
+            email, 
+            phone,
+            cpf
+          ),
           receipt_items (
             id,
             product_id,
             quantity,
             price,
-            products (id, name, code)
-          ),
-          employees!inner (
-            id,
-            full_name,
-            whatsapp,
-            role
+            imei,
+            type,
+            manual_cost,
+            products (
+              id,
+              name,
+              code
+            )
           )
         `)
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error('Erro ao buscar recibo:', error);
-        return null;
-      }
-
-      if (!data) return null;
-
-      return {
-        receipt: data,
-        items: data.receipt_items || [],
-        employee: data.employees
-      };
+      if (receiptError) throw receiptError;
+      return receiptData;
     } catch (error) {
       console.error('Erro ao buscar recibo:', error);
       return null;

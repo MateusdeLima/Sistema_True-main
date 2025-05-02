@@ -12,6 +12,11 @@ type ReceiptItem = Database['public']['Tables']['receipt_items']['Row'] & {
   imei?: string;
   type?: 'novo' | 'seminovo';
   manual_cost?: number;
+  products?: {
+    id: string;
+    name: string;
+    code: string;
+  };
 };
 
 interface FormItem {
@@ -193,7 +198,7 @@ function Receipts() {
     }
 
     try {
-      const { total, installmentValue, totalCost } = calculateTotals();
+      const { installmentValue, totalCost } = calculateTotals();
       
       const receiptData = {
         customer_id: formData.customerId,
@@ -211,7 +216,7 @@ function Receipts() {
         product_id: item.productId,
         quantity: item.quantity,
         price: item.price,
-        imei: item.imei,
+        imei: item.imei, // Garantindo que o IMEI seja incluído
         type: item.type,
         manual_cost: item.type === 'seminovo' ? item.manualCost : undefined
       }));
@@ -262,31 +267,25 @@ function Receipts() {
 
     // Buscar os itens do recibo do banco de dados
     const receiptData = await getReceiptById(receipt.id);
-    if (!receiptData) {
+    if (!receiptData || !receiptData.receipt_items) {
       toast.error('Não foi possível encontrar os itens do recibo');
       return;
     }
-    const items = receiptData.items;
-    // Garantir que o campo IMEI está sendo propagado corretamente para os itens do recibo
-    const receiptProducts = await Promise.all(items.map(async (item: ReceiptItem) => {
-      const product = products.find(p => p.id === item.product_id);
-      if (!product) return null;
-      return {
-        name: product.name,
-        quantity: item.quantity,
-        price: item.price,
-        imei: item.imei // Certifique-se de incluir o IMEI aqui
-      };
-    }));
 
-    const validProducts = receiptProducts.filter((p): p is NonNullable<typeof p> => p !== null);
+    // Mapear os itens incluindo o IMEI
+    const receiptProducts = receiptData.receipt_items.map(item => ({
+      name: products.find(p => p.id === item.product_id)?.name || 'Produto',
+      quantity: item.quantity,
+      price: item.price,
+      imei: item.imei // Garantir que o IMEI seja incluído
+    }));
 
     try {
       const pdfBlob = await generateReceiptPDF(
         receipt,
         customer.full_name,
         customer.cpf,
-        validProducts,
+        receiptProducts,
         employee.full_name
       );
 
@@ -498,7 +497,7 @@ function Receipts() {
                         <li key={item.id} className="flex items-center gap-2">
                           <span className="flex-1">
                             {item.products?.name || 'Produto'} (Qtd: {item.quantity})
-                            {item.imei && <span> - IMEI: {item.imei}</span>}
+                            {item.imei && <span className="ml-2 text-gray-600"> - IMEI: {item.imei}</span>}
                           </span>
                           {editingItemId === item.id ? (
                             <>
