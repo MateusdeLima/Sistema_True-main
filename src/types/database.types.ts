@@ -133,6 +133,7 @@ export interface ReceiptItem {
   product_id: string;
   quantity: number;
   price: number;
+  imei?: string;
   products?: {
     id: string;
     name: string;

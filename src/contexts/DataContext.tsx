@@ -345,7 +345,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               quantity: item.quantity,
               price: item.price,
               type: item.type,
-              manual_cost: item.type === 'seminovo' ? item.manual_cost : null
+              manual_cost: item.type === 'seminovo' ? item.manual_cost : null,
+              imei: item.imei,
             }))
           )
           .select(`
