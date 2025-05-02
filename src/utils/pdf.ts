@@ -184,7 +184,7 @@ function generateBasicReceipt(doc: jsPDF, receipt: Receipt, customerName: string
   // Ajustar posições das assinaturas considerando as margens
   const centerVendedor = marginLeft + 4;
   const centerCliente = pageWidth - marginRight - 4;
-  const lineWidth = 2; // Reduzindo a espessura da linha de 4 para 2
+  const lineWidth = 4;
 
   doc.setFont('helvetica', 'italic');
   doc.text('True Iphones', centerVendedor, startY - 0.3, { align: 'center' });
@@ -365,7 +365,6 @@ export async function generateReceiptPDF(
     doc.setFontSize(9);
     doc.setTextColor(102, 102, 102);
     doc.text('Obrigado por escolher a True Iphones!', pageWidth / 2, startY, { align: 'center' });
-    doc.text('Para dúvidas, entre em contato: (11) 97851-3496', pageWidth / 2, startY + 0.5, { align: 'center' });
 
   } catch (error) {
     console.error('Erro ao adicionar imagens ao PDF:', error);
