@@ -184,10 +184,11 @@ function generateBasicReceipt(doc: jsPDF, receipt: Receipt, customerName: string
   // Ajustar posições das assinaturas considerando as margens
   const centerVendedor = marginLeft + 4;
   const centerCliente = pageWidth - marginRight - 4;
-  const lineWidth = 4;
+  const lineWidth = 2; // Reduzindo a espessura da linha de 4 para 2
 
   doc.setFont('helvetica', 'italic');
   doc.text('True Iphones', centerVendedor, startY - 0.3, { align: 'center' });
+  doc.setLineWidth(0.02); // Adicionando configuração para linha mais fina
   doc.line(centerVendedor - lineWidth / 2, startY, centerVendedor + lineWidth / 2, startY);
   doc.setFont('helvetica', 'normal');
   doc.text('Assinatura do Vendedor', centerVendedor, startY + 0.5, { align: 'center' });
@@ -246,14 +247,14 @@ export async function generateReceiptPDF(
     // Restaurar opacidade para o logo principal
     doc.setGState(new (doc as any).GState({ opacity: 1 }));
 
-    // Mantendo o tamanho do logo em 8cm
-    const logoWidth = 8;
+    // Mantendo o tamanho do logo em 10cm
+    const logoWidth = 10;
     const logoHeight = (logoImage.height * logoWidth) / logoImage.width;
     const logoX = (pageWidth - logoWidth) / 2;
     doc.addImage(logoImage, 'PNG', logoX, marginTop, logoWidth, logoHeight);
 
     // Diminuir o espaçamento após o logo de 0.8 para 0.4
-    startY = marginTop + logoHeight + 0.2;
+    startY = marginTop + logoHeight + 0.1;
 
     // Continuar com o resto do recibo com espaçamentos reduzidos
     doc.setFontSize(10);
@@ -348,10 +349,11 @@ export async function generateReceiptPDF(
     // Ajustar posições das assinaturas considerando as margens
     const centerVendedor = marginLeft + 4;
     const centerCliente = pageWidth - marginRight - 4;
-    const lineWidth = 4;
+    const lineWidth = 2; // Reduzindo a espessura da linha de 4 para 2
 
     doc.setFont('helvetica', 'italic');
     doc.text('True Iphones', centerVendedor, startY - 0.3, { align: 'center' });
+    doc.setLineWidth(0.02); // Adicionando configuração para linha mais fina
     doc.line(centerVendedor - lineWidth / 2, startY, centerVendedor + lineWidth / 2, startY);
     doc.setFont('helvetica', 'normal');
     doc.text('Assinatura do Vendedor', centerVendedor, startY + 0.5, { align: 'center' });
