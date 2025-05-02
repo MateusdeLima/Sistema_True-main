@@ -267,6 +267,7 @@ function Receipts() {
       return;
     }
     const items = receiptData.items;
+    // Garantir que o campo IMEI está sendo propagado corretamente para os itens do recibo
     const receiptProducts = await Promise.all(items.map(async (item: ReceiptItem) => {
       const product = products.find(p => p.id === item.product_id);
       if (!product) return null;
@@ -274,7 +275,7 @@ function Receipts() {
         name: product.name,
         quantity: item.quantity,
         price: item.price,
-        imei: item.imei
+        imei: item.imei // Certifique-se de incluir o IMEI aqui
       };
     }));
 
