@@ -7,14 +7,18 @@ import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Products from './pages/Products';
 import Receipts from './pages/Receipts';
-import Reports from './pages/Reports';
 import Employees from './pages/Employees';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { user } = useAuth();
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Redireciona funcionário para clientes se tentar acessar rota não permitida
+    return <Navigate to="/customers" />;
+  }
+  return <>{children}</>;
 };
 
 function Footer() {
@@ -49,7 +53,7 @@ function App() {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["admin"]}>
                     <div className="flex flex-col min-h-screen">
                       <Navbar />
                       <main className="flex-1 container mx-auto px-4 py-8 transition-all duration-300 ease-in-out">
@@ -103,23 +107,9 @@ function App() {
                 }
               />
               <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute>
-                    <div className="flex flex-col min-h-screen">
-                      <Navbar />
-                      <main className="flex-1 container mx-auto px-4 py-8 transition-all duration-300 ease-in-out">
-                        <Reports />
-                      </main>
-                      <Footer />
-                    </div>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/employees"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["admin"]}>
                     <div className="flex flex-col min-h-screen">
                       <Navbar />
                       <main className="flex-1 container mx-auto px-4 py-8 transition-all duration-300 ease-in-out">

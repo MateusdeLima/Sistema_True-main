@@ -15,19 +15,25 @@ import { useAuth } from '../contexts/AuthContext';
 
 function Navbar() {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
-  const navItems = [
-    { path: '/', icon: Smartphone, label: 'Início' },
-    { path: '/customers', icon: Users, label: 'Clientes' },
-    { path: '/products', icon: Package, label: 'Produtos' },
-    { path: '/receipts', icon: Receipt, label: 'Recibos' },
-    { path: '/reports', icon: BarChart2, label: 'Relatórios' },
-    { path: '/employees', icon: UserCog, label: 'Funcionários' },
-  ];
+  // Definir abas permitidas conforme o papel
+  const navItems = user?.role === 'admin'
+    ? [
+        { path: '/', icon: Smartphone, label: 'Início' },
+        { path: '/customers', icon: Users, label: 'Clientes' },
+        { path: '/products', icon: Package, label: 'Produtos' },
+        { path: '/receipts', icon: Receipt, label: 'Recibos' },
+        { path: '/employees', icon: UserCog, label: 'Funcionários' },
+      ]
+    : [
+        { path: '/customers', icon: Users, label: 'Clientes' },
+        { path: '/products', icon: Package, label: 'Produtos' },
+        { path: '/receipts', icon: Receipt, label: 'Recibos' },
+      ];
 
   return (
     <>
@@ -37,9 +43,9 @@ function Navbar() {
             {/* Logo */}
             <div className="flex-shrink-0">
               <img
-                src="https://i.postimg.cc/jdqFP75f/Captura-de-tela-2025-02-16-213923.png"
+                src="/imagem/logo.png"
                 alt="Logo IPHONES"
-                className="h-12 transform hover:scale-105 transition-transform duration-200"
+                className="h-[130px] transform hover:scale-105 transition-transform duration-200"
               />
             </div>
             

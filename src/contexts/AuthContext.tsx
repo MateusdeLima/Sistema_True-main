@@ -48,13 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Buscando usuário com ID:', userId);
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-      if (error) {
+    if (error) {
         console.error('Erro ao buscar usuário:', error);
         // Se o usuário não existir na tabela users, vamos criá-lo
         if (error.code === 'PGRST116') {
@@ -83,12 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
         }
-        return;
-      }
+      return;
+    }
 
-      if (data) {
+    if (data) {
         console.log('Usuário encontrado:', data);
-        setUser(data);
+      setUser(data);
       }
     } catch (error) {
       console.error('Erro geral ao buscar usuário:', error);
@@ -122,10 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setAuthUser(null);
-      setUser(null);
+    setUser(null);
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       throw error;
@@ -134,15 +134,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserPreferences = async (userId: string, preferences: User['preferences']) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ preferences })
-        .eq('id', userId);
+    const { error } = await supabase
+      .from('users')
+      .update({ preferences })
+      .eq('id', userId);
 
       if (error) throw error;
 
-      if (user?.id === userId) {
-        setUser((prev) => (prev ? { ...prev, preferences } : null));
+    if (user?.id === userId) {
+      setUser((prev) => (prev ? { ...prev, preferences } : null));
       }
     } catch (error) {
       console.error('Erro ao atualizar preferências:', error);

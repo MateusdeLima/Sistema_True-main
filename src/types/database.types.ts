@@ -15,6 +15,7 @@ export interface Database {
           full_name: string
           email: string | null
           phone: string | null
+          cpf: string | null
           created_at: string
           updated_at: string
         }
@@ -121,6 +122,7 @@ export interface Customer {
   full_name: string;
   email: string | null;
   phone: string | null;
+  cpf: string | null;
   created_at: string;
   updated_at: string;
 }

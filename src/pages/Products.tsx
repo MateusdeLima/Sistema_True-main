@@ -3,9 +3,11 @@ import { useData } from '../contexts/DataContext';
 import { Search, PackagePlus, Edit2, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../utils/notifications';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 function Products() {
   const { products, addProduct, updateProduct, deleteProduct, searchProducts } = useData();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
@@ -17,6 +19,7 @@ function Products() {
     defaultPrice: 0,
   });
 
+  const isAdmin = user?.role === 'admin';
   const filteredProducts = searchQuery ? searchProducts(searchQuery) : products;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,8 +71,8 @@ function Products() {
   const handleDelete = async (id: string) => {
     try {
       if (window.confirm('Tem certeza que deseja excluir este produto?')) {
-        await deleteProduct(id);
-        toast.success('Produto excluído com sucesso!');
+      await deleteProduct(id);
+      toast.success('Produto excluído com sucesso!');
       }
     } catch (error) {
       console.error('Erro ao excluir produto:', error);
@@ -81,17 +84,19 @@ function Products() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
-        <button
-          onClick={() => {
-            setFormData({ name: '', code: '', memory: '', color: '', defaultPrice: 0 });
-            setEditingProduct(null);
-            setShowAddModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        >
-          <PackagePlus className="w-4 h-4" />
-          Novo Produto
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setFormData({ name: '', code: '', memory: '', color: '', defaultPrice: 0 });
+              setEditingProduct(null);
+              setShowAddModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            <PackagePlus className="w-4 h-4" />
+            Novo Produto
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 bg-white p-4 rounded-lg shadow-md">
@@ -122,12 +127,16 @@ function Products() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Cor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Preço
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Preço
+                  </th>
+                )}
+                {isAdmin && (
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -145,23 +154,27 @@ function Products() {
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {product.color}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatCurrency(product.default_price)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+                  {isAdmin && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatCurrency(product.default_price)}
+                    </td>
+                  )}
+                  {isAdmin && (
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="text-blue-600 hover:text-blue-900 mr-4"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

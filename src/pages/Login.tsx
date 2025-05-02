@@ -31,9 +31,9 @@ function Login() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className= "flex justify-center">
   <img
-    src="https://i.postimg.cc/jdqFP75f/Captura-de-tela-2025-02-16-213923.png"
+    src="/imagem/logo.png"
     alt="Logo IPHONES"
-    className="h-12 transform hover:scale-105 transition-transform duration-200" // Ajuste a altura (h-16) conforme necessário
+    className="h-[160px] transform hover:scale-105 transition-transform duration-200"
   />
 </div>
         <p className="mt-2 text-center text-sm text-gray-600">

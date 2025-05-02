@@ -5,20 +5,29 @@ import { formatCurrency } from '../utils/notifications';
 import { generateReceiptPDF } from '../utils/pdf';
 import toast from 'react-hot-toast';
 import { Database } from '../types/database.types';
+import { useAuth } from '../contexts/AuthContext';
 
 type Receipt = Database['public']['Tables']['receipts']['Row'];
-type ReceiptItem = Database['public']['Tables']['receipt_items']['Row'];
+type ReceiptItem = Database['public']['Tables']['receipt_items']['Row'] & {
+  imei?: string;
+  type?: 'novo' | 'seminovo';
+  manual_cost?: number;
+};
 
 interface FormItem {
   productId: string;
   quantity: number;
   price: number;
+  imei: string;
+  type: 'novo' | 'seminovo';
+  manualCost?: number;
 }
 
 interface PrintableProduct {
   name: string;
   quantity: number;
   price: number;
+  imei?: string;
 }
 
 interface ReceiptFormData {
@@ -35,7 +44,7 @@ interface ReceiptFormData {
   customFields: Record<string, string>;
 }
 
-type ProductField = 'productId' | 'quantity' | 'price';
+type ProductField = 'productId' | 'quantity' | 'price' | 'imei' | 'type' | 'manualCost';
 
 function Receipts() {
   const {
@@ -53,12 +62,14 @@ function Receipts() {
     updateReceipt,
     updateReceiptItemPrice,
   } = useData();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // Estado inicial do formulário
   const initialFormData: ReceiptFormData = {
     customerId: '',
     employeeId: '',
-    items: [{ productId: '', quantity: 1, price: 0 }],
+    items: [{ productId: '', quantity: 1, price: 0, imei: '', type: 'novo', manualCost: undefined }],
     paymentMethod: 'Dinheiro',
     installments: 1,
     warranty: { durationMonths: 0 },
@@ -125,7 +136,10 @@ function Receipts() {
             items: receiptData.items.map(item => ({
               productId: item.product_id,
               quantity: item.quantity,
-              price: item.price
+              price: item.price,
+              imei: (item as any)?.imei || '',
+              type: (item as any)?.type || 'novo',
+              manualCost: (item as any)?.manual_cost ?? undefined
             }))
           });
         }
@@ -137,18 +151,63 @@ function Receipts() {
 
   const calculateTotals = () => {
     const total = formData.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const totalCost = formData.items.reduce((acc, item) => {
+      if (item.type === 'seminovo') {
+        return acc + (item.manualCost || 0) * item.quantity;
+      } else {
+        const product = products.find(p => p.id === item.productId);
+        return acc + (product ? product.default_price * item.quantity : 0);
+      }
+    }, 0);
     const installmentValue = formData.installments > 0 ? total / formData.installments : total;
-    return { total, installmentValue };
+    return { total, installmentValue, totalCost };
+  };
+
+  // Função para formatar o IMEI
+  const formatIMEI = (value: string) => {
+    // Remove todos os caracteres não numéricos
+    const numbers = value.replace(/\D/g, '');
+    
+    // Limita a 15 dígitos
+    const limitedNumbers = numbers.slice(0, 15);
+    
+    // Aplica a máscara
+    let formattedIMEI = '';
+    if (limitedNumbers.length <= 6) {
+      formattedIMEI = limitedNumbers;
+    } else if (limitedNumbers.length <= 8) {
+      formattedIMEI = `${limitedNumbers.slice(0, 6)}-${limitedNumbers.slice(6)}`;
+    } else if (limitedNumbers.length <= 14) {
+      formattedIMEI = `${limitedNumbers.slice(0, 6)}-${limitedNumbers.slice(6, 8)}-${limitedNumbers.slice(8)}`;
+    } else {
+      formattedIMEI = `${limitedNumbers.slice(0, 6)}-${limitedNumbers.slice(6, 8)}-${limitedNumbers.slice(8, 14)}-${limitedNumbers.slice(14)}`;
+    }
+    
+    return formattedIMEI;
+  };
+
+  // Função para validar o IMEI
+  const validateIMEI = (imei: string) => {
+    const pattern = /^\d{6}-\d{2}-\d{6}-\d$/;
+    return pattern.test(imei);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar formato do IMEI para todos os produtos
+    const invalidIMEI = formData.items.some(item => item.imei && !validateIMEI(item.imei));
+    if (invalidIMEI) {
+      toast.error('Por favor, preencha o IMEI no formato correto: 000000-00-000000-0');
+      return;
+    }
+
     try {
-      const { total, installmentValue } = calculateTotals();
+      const { total, installmentValue, totalCost } = calculateTotals();
       
       const receiptData = {
         customer_id: formData.customerId,
-        total_amount: total,
+        total_amount: totalCost,
         payment_method: formData.paymentMethod,
         installments: formData.installments,
         installment_value: installmentValue,
@@ -161,19 +220,31 @@ function Receipts() {
       const receiptItems = formData.items.map(item => ({
         product_id: item.productId,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        imei: item.imei,
+        type: item.type,
+        manual_cost: item.type === 'seminovo' ? item.manualCost : undefined
       }));
 
+      let newReceipt;
       if (editingReceipt) {
         await updateReceipt(editingReceipt.id, receiptData);
       } else {
-        await addReceipt(receiptData, receiptItems);
+        newReceipt = await addReceipt(receiptData, receiptItems);
       }
 
       setShowAddModal(false);
       setEditingReceipt(null);
       setFormData(initialFormData);
       toast.success('Recibo salvo com sucesso!');
+
+      if (newReceipt && newReceipt.receipt_items) {
+        setTimeout(() => {
+          newReceipt.receipt_items.forEach((item: ReceiptItem) => {
+            startEditItemPrice(item.id, item.price);
+          });
+        }, 100);
+      }
     } catch (error) {
       console.error('Erro ao salvar recibo:', error);
       toast.error('Erro ao salvar recibo. Verifique se todos os campos obrigatórios foram preenchidos.');
@@ -213,16 +284,40 @@ function Receipts() {
         name: product.name,
         quantity: item.quantity,
         price: item.price,
+        imei: item.imei
       };
     }));
 
-    const validProducts = receiptProducts.filter((p): p is PrintableProduct => p !== null);
-    const formattedDate = new Date(receipt.created_at).toLocaleDateString('pt-BR');
-    const fileName = `recibo ${customer.full_name}-${formattedDate}.pdf`;
+    const validProducts = receiptProducts.filter((p): p is NonNullable<typeof p> => p !== null);
 
-    const doc = generateReceiptPDF(receipt, customer.full_name, validProducts, employee.full_name);
-    doc.save(fileName);
-    toast.success('PDF gerado com sucesso!');
+    try {
+      const pdfBlob = await generateReceiptPDF(
+        receipt,
+        customer.full_name,
+        customer.cpf,
+        validProducts,
+        employee.full_name
+      );
+
+      // Formatar a data para o nome do arquivo
+      const dataFormatada = new Date(receipt.created_at).toLocaleDateString('pt-BR').replace(/\//g, '-');
+      const nomeArquivo = `recibo ${customer.full_name} ${dataFormatada}.pdf`;
+
+      // Criar URL do blob e fazer download
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', nomeArquivo);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success('PDF gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar o PDF do recibo');
+    }
   };
 
   const handleWhatsApp = (receipt: Receipt) => {
@@ -240,13 +335,14 @@ function Receipts() {
 
   const handleProductChange = (index: number, field: ProductField, value: string | number) => {
     const newItems = [...formData.items];
-    
     if (field === 'productId') {
       const selectedProduct = products.find(p => p.id === value);
       newItems[index] = {
         ...newItems[index],
         productId: value as string,
-        price: selectedProduct ? selectedProduct.default_price : 0
+        price: selectedProduct ? selectedProduct.default_price : 0,
+        manualCost: undefined,
+        type: 'novo',
       };
     } else if (field === 'quantity') {
       newItems[index] = {
@@ -258,8 +354,35 @@ function Receipts() {
         ...newItems[index],
         price: typeof value === 'string' ? parseFloat(value) : value
       };
+    } else if (field === 'imei') {
+      newItems[index] = {
+        ...newItems[index],
+        imei: formatIMEI(value as string)
+      };
+    } else if (field === 'type') {
+      const selectedProduct = products.find(p => p.id === newItems[index].productId);
+      if (value === 'seminovo') {
+        newItems[index] = {
+          ...newItems[index],
+          type: 'seminovo',
+          manualCost: 0,
+          price: 0
+        };
+      } else {
+        newItems[index] = {
+          ...newItems[index],
+          type: 'novo',
+          manualCost: undefined,
+          price: selectedProduct ? selectedProduct.default_price : 0
+        };
+      }
+    } else if (field === 'manualCost') {
+      const cost = typeof value === 'string' ? parseFloat(value) : value;
+      newItems[index] = {
+        ...newItems[index],
+        manualCost: cost
+      };
     }
-    
     setFormData({ ...formData, items: newItems });
   };
 
@@ -271,7 +394,7 @@ function Receipts() {
   const handleAddProduct = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { productId: '', quantity: 1, price: 0 }],
+      items: [...formData.items, { productId: '', quantity: 1, price: 0, imei: '', type: 'novo', manualCost: undefined }],
     });
   };
 
@@ -361,9 +484,11 @@ function Receipts() {
                 <p className="text-sm">
                   Data: {new Date(receipt.created_at).toLocaleDateString('pt-BR')}
                 </p>
-                <p className="text-sm">
-                  Valor Total: {formatCurrency(receipt.total_amount)}
-                </p>
+                {isAdmin && (
+                  <p className="text-sm">
+                    Valor de Custo: {formatCurrency(receipt.total_amount)}
+                  </p>
+                )}
                 <p className="text-sm">
                   Forma de Pagamento: {receipt.payment_method}
                   {receipt.installments > 1 && ` (${receipt.installments}x de ${formatCurrency(receipt.installment_value)})`}
@@ -441,22 +566,30 @@ function Receipts() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cliente
-                  </label>
-                  <select
-                    required
-                    value={formData.customerId}
-                    onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.full_name}
-                      </option>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente..."
+                    value={formData.customFields.clienteBusca || ''}
+                    onChange={e => {
+                      setFormData({
+                        ...formData,
+                        customFields: { ...formData.customFields, clienteBusca: e.target.value }
+                      });
+                    }}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 mb-2"
+                  />
+                  <div className="max-h-32 overflow-y-auto border rounded bg-white shadow">
+                    {customers.filter(c => c.full_name.toLowerCase().includes((formData.customFields.clienteBusca || '').toLowerCase())).map(c => (
+                      <div
+                        key={c.id}
+                        className={`px-3 py-1 cursor-pointer hover:bg-blue-100 ${formData.customerId === c.id ? 'bg-blue-200' : ''}`}
+                        onClick={() => setFormData({ ...formData, customerId: c.id, customFields: { ...formData.customFields, clienteBusca: c.full_name } })}
+                      >
+                        {c.full_name}
+                      </div>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
                 <div>
@@ -526,32 +659,33 @@ function Receipts() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Garantia (meses)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Garantia (meses)</label>
                   <input
                     type="number"
                     required
                     min="0"
                     value={formData.warranty.durationMonths}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      warranty: { durationMonths: parseInt(e.target.value) || 0 }
-                    })}
+                    onChange={e => {
+                      const months = parseInt(e.target.value) || 0;
+                      const baseDate = new Date(formData.date);
+                      baseDate.setMonth(baseDate.getMonth() + months);
+                      setFormData({
+                        ...formData,
+                        warranty: { durationMonths: months },
+                        warrantyExpiresAt: months > 0 ? baseDate.toISOString().split('T')[0] : ''
+                      });
+                    }}
                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data de Expiração da Garantia
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data de Expiração da Garantia</label>
                   <input
                     type="date"
                     required
                     value={formData.warrantyExpiresAt}
-                    onChange={(e) => setFormData({ ...formData, warrantyExpiresAt: e.target.value })}
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    readOnly
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -562,7 +696,7 @@ function Receipts() {
                 </label>
                 <div className="space-y-4">
                   {formData.items.map((product, index) => (
-                    <div key={index} className="flex items-end gap-4">
+                    <div key={index} className="flex flex-col md:flex-row md:items-end gap-4 border-b pb-4 mb-4">
                       <div className="flex-1">
                         <select
                           required
@@ -573,7 +707,7 @@ function Receipts() {
                           <option value="">Selecione um produto</option>
                           {filteredProducts.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.name} - {p.code} - {formatCurrency(p.default_price)}
+                              {p.name} - {p.code}{isAdmin ? ` - ${formatCurrency(p.default_price)}` : ''}
                             </option>
                           ))}
                         </select>
@@ -596,6 +730,46 @@ function Receipts() {
                           placeholder="Quantidade"
                         />
                       </div>
+                      <div className="w-48">
+                        <input
+                          type="text"
+                          placeholder="IMEI"
+                          value={product.imei}
+                          onChange={e => handleProductChange(index, 'imei', e.target.value)}
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                          pattern="\d{6}-\d{2}-\d{6}-\d"
+                          title="Formato: 000000-00-000000-0"
+                          required
+                        />
+                        {product.imei && !validateIMEI(product.imei) && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Formato: 000000-00-000000-0
+                          </p>
+                        )}
+                      </div>
+                      <div className="w-32">
+                        <select
+                          value={product.type}
+                          onChange={e => handleProductChange(index, 'type', e.target.value)}
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        >
+                          <option value="novo">Novo</option>
+                          <option value="seminovo">Seminovo</option>
+                        </select>
+                      </div>
+                      {product.type === 'seminovo' && (
+                        <div className="w-32">
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            value={product.manualCost ?? 0}
+                            onChange={e => handleProductChange(index, 'manualCost', e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Custo (seminovo)"
+                          />
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleRemoveProduct(index)}

@@ -12,6 +12,7 @@ function Customers() {
     fullName: '',
     email: '',
     phone: '',
+    cpf: ''
   });
 
   const filteredCustomers = searchQuery ? searchCustomers(searchQuery) : customers;
@@ -29,10 +30,18 @@ function Customers() {
         return;
       }
 
+      // Validação do formato do CPF
+      const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+      if (formData.cpf && !cpfRegex.test(formData.cpf)) {
+        toast.error('CPF deve estar no formato XXX.XXX.XXX-XX');
+        return;
+      }
+
       const customerData = {
         full_name: formData.fullName.trim(),
         email: formData.email.trim() || null,
-        phone: formData.phone?.trim() || null
+        phone: formData.phone?.trim() || null,
+        cpf: formData.cpf.trim() || null
       };
 
       if (editingCustomer) {
@@ -45,7 +54,7 @@ function Customers() {
       
       setShowAddModal(false);
       setEditingCustomer(null);
-      setFormData({ fullName: '', email: '', phone: '' });
+      setFormData({ fullName: '', email: '', phone: '', cpf: '' });
     } catch (error) {
       console.error('Erro ao salvar cliente:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar cliente');
@@ -56,7 +65,8 @@ function Customers() {
     setFormData({
       fullName: customer.full_name,
       email: customer.email || '',
-      phone: customer.phone
+      phone: customer.phone || '',
+      cpf: customer.cpf || ''
     });
     setEditingCustomer(customer.id);
     setShowAddModal(true);
@@ -64,9 +74,9 @@ function Customers() {
 
   const handleDelete = async (id: string) => {
     try {
-      if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
+    if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
         await deleteCustomer(id);
-        toast.success('Cliente excluído com sucesso!');
+      toast.success('Cliente excluído com sucesso!');
       }
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
@@ -84,7 +94,7 @@ function Customers() {
         <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
         <button
           onClick={() => {
-            setFormData({ fullName: '', email: '', phone: '' });
+            setFormData({ fullName: '', email: '', phone: '', cpf: '' });
             setEditingCustomer(null);
             setShowAddModal(true);
           }}
@@ -121,6 +131,9 @@ function Customers() {
                   Telefone
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  CPF
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Data de Cadastro
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -139,6 +152,9 @@ function Customers() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {customer.phone}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {customer.cpf}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(customer.created_at).toLocaleDateString('pt-BR')}
@@ -178,6 +194,26 @@ function Customers() {
                   required
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">CPF</label>
+                <input
+                  type="text"
+                  placeholder="XXX.XXX.XXX-XX"
+                  value={formData.cpf}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    // Remove caracteres não numéricos
+                    value = value.replace(/\D/g, '');
+                    // Aplica a máscara
+                    if (value.length <= 11) {
+                      value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                    }
+                    setFormData({ ...formData, cpf: value });
+                  }}
+                  maxLength={14}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>

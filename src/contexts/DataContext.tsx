@@ -11,11 +11,17 @@ type Customer = {
   phone: string | null;
   created_at: string;
   updated_at: string;
+  cpf: string | null;
 };
 type Product = Database['public']['Tables']['products']['Row'];
 type Receipt = Database['public']['Tables']['receipts']['Row'];
-type ReceiptItem = Database['public']['Tables']['receipt_items']['Row'];
+type BaseReceiptItem = Database['public']['Tables']['receipt_items']['Row'];
 type Employee = Database['public']['Tables']['employees']['Row'];
+
+interface ReceiptItem extends BaseReceiptItem {
+  type?: 'novo' | 'seminovo';
+  manual_cost?: number;
+}
 
 interface Report {
   period: string;
@@ -29,6 +35,8 @@ interface Report {
     total: number;
   }>;
   averageWarrantyMonths: number;
+  totalCost: number;
+  totalProfit: number;
 }
 
 interface DataContextType {
@@ -42,7 +50,7 @@ interface DataContextType {
   addProduct: (product: Omit<Product, 'id' | 'created_at'>) => Promise<void>;
   updateProduct: (id: string, data: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  addReceipt: (receipt: Omit<Receipt, 'id' | 'created_at' | 'updated_at'>, items: Array<Omit<ReceiptItem, 'id' | 'receipt_id'>>) => Promise<Receipt | null>;
+  addReceipt: (receipt: Omit<Receipt, 'id' | 'created_at'>, items: Array<Omit<ReceiptItem, 'id' | 'receipt_id'>>) => Promise<Receipt | null>;
   updateReceipt: (id: string, data: Partial<Receipt>) => Promise<void>;
   deleteReceipt: (id: string) => Promise<void>;
   getCustomerById: (id: string) => Customer | undefined;
@@ -126,6 +134,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           product_id,
           quantity,
           price,
+          type,
+          manual_cost,
           products (
             id,
             name,
@@ -326,16 +336,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       if (receipt) {
         // Adicionar os itens do recibo
-        const { error: itemsError } = await supabase
+        const { data: items, error: itemsError } = await supabase
           .from('receipt_items')
           .insert(
             receiptItems.map(item => ({
               receipt_id: receipt.id,
               product_id: item.product_id,
               quantity: item.quantity,
-              price: item.price
+              price: item.price,
+              type: item.type,
+              manual_cost: item.type === 'seminovo' ? item.manual_cost : null
             }))
-          );
+          )
+          .select(`
+            id,
+            product_id,
+            quantity,
+            price,
+            type,
+            manual_cost,
+            products (
+              id,
+              name,
+              code,
+              price,
+              memory,
+              color
+            )
+          `);
 
         if (itemsError) {
           console.error('Erro ao adicionar itens do recibo:', itemsError);
@@ -344,9 +372,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           return null;
         }
 
-        // Atualizar o estado local
-        setReceipts(prev => [receipt, ...prev]);
-        return receipt;
+        const completeReceipt = {
+          ...receipt,
+          receipt_items: items
+        };
+
+        // Atualizar o estado local com o recibo completo
+        setReceipts(prev => [completeReceipt, ...prev]);
+        return completeReceipt;
       }
       return null;
     } catch (error) {
@@ -437,7 +470,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       (c) =>
         c.full_name.toLowerCase().includes(searchTerm) ||
         (c.email && c.email.toLowerCase().includes(searchTerm)) ||
-        (c.phone && c.phone.toLowerCase().includes(searchTerm))
+        (c.phone && c.phone.toLowerCase().includes(searchTerm)) ||
+        (c.cpf && c.cpf.toLowerCase().includes(searchTerm))
     );
   };
 
@@ -460,75 +494,141 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const generateReport = async (startDate: string, endDate: string): Promise<Report> => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    try {
+      // Converter as datas para timestamps UNIX (em segundos)
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const startTimestamp = Math.floor(start.getTime() / 1000);
 
-    const { data: periodReceipts, error } = await supabase
-      .from('receipts')
-      .select(`
-        *,
-        receipt_items (*)
-      `)
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString());
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      const endTimestamp = Math.floor(end.getTime() / 1000);
 
-    if (error) throw error;
+      const { data: periodReceipts, error } = await supabase
+        .from('receipts')
+        .select(`
+          *,
+          receipt_items (
+            id,
+            product_id,
+            quantity,
+            price,
+            type,
+            manual_cost
+          )
+        `)
+        .gte('created_at', new Date(startTimestamp * 1000).toISOString())
+        .lt('created_at', new Date((endTimestamp + 86400) * 1000).toISOString());
 
-    const receiptsData = periodReceipts || [];
-    const totalAmount = receiptsData.reduce((acc, r) => acc + Number(r.total_amount || 0), 0);
-    const paymentMethodTotals: Record<string, number> = {};
-    const productQuantities: Record<string, { quantity: number; total: number }> = {};
+      if (error) {
+        console.error('Erro ao gerar relatório:', error);
+        throw error;
+      }
 
-    receiptsData.forEach((receipt) => {
-      const paymentMethod = receipt.payment_method || 'Não especificado';
-      paymentMethodTotals[paymentMethod] = 
-        (paymentMethodTotals[paymentMethod] || 0) + Number(receipt.total_amount || 0);
-
-      const items = (receipt.receipt_items as ReceiptItem[]) || [];
-      items.forEach((item) => {
-        if (!productQuantities[item.product_id]) {
-          productQuantities[item.product_id] = {
-            quantity: 0,
-            total: 0,
-          };
-        }
-        productQuantities[item.product_id].quantity += item.quantity || 0;
-        productQuantities[item.product_id].total += Number(item.price || 0) * (item.quantity || 0);
+      // Log para debug
+      console.log('Período consultado:', {
+        start: new Date(startTimestamp * 1000).toISOString(),
+        end: new Date((endTimestamp + 86400) * 1000).toISOString(),
+        receiptsCount: periodReceipts?.length || 0
       });
-    });
 
-    const topProducts = await Promise.all(
-      Object.entries(productQuantities)
-        .map(async ([productId, stats]) => {
-          const product = await getProductById(productId);
-          return {
-            productId,
-            name: product?.name || 'Produto Removido',
-            quantity: stats.quantity,
-            total: stats.total,
-          };
-        })
-    );
+      const receiptsData = periodReceipts || [];
 
-    topProducts.sort((a, b) => b.quantity - a.quantity);
+      // Log dos recibos encontrados para debug
+      receiptsData.forEach(receipt => {
+        console.log('Recibo encontrado:', {
+          id: receipt.id,
+          created_at: receipt.created_at,
+          total: receipt.total_amount
+        });
+      });
 
-    const totalWarrantyMonths = receiptsData.reduce(
-      (acc, r) => acc + (r.warranty_duration_months || 0),
-      0
-    );
+      // Resto do código permanece igual
+      const totalAmount = receiptsData.reduce((acc, r) => {
+        const items = (r.receipt_items as ReceiptItem[]) || [];
+        return acc + items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      }, 0);
 
-    const averageWarrantyMonths = receiptsData.length > 0 
-      ? totalWarrantyMonths / receiptsData.length 
-      : 0;
+      const paymentMethodTotals: Record<string, number> = {};
+      receiptsData.forEach((receipt) => {
+        const paymentMethod = receipt.payment_method || 'Não especificado';
+        const items = (receipt.receipt_items as ReceiptItem[]) || [];
+        const valorVenda = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        paymentMethodTotals[paymentMethod] = (paymentMethodTotals[paymentMethod] || 0) + valorVenda;
+      });
 
-    return {
-      period: `${format(start, 'dd/MM/yyyy')} - ${format(end, 'dd/MM/yyyy')}`,
-      totalReceipts: receiptsData.length,
-      totalAmount,
-      paymentMethodTotals,
-      topProducts: topProducts.slice(0, 10),
-      averageWarrantyMonths,
-    };
+      const productQuantities: Record<string, { quantity: number; total: number }> = {};
+
+      receiptsData.forEach((receipt) => {
+        const items = (receipt.receipt_items as ReceiptItem[]) || [];
+        items.forEach((item) => {
+          if (!productQuantities[item.product_id]) {
+            productQuantities[item.product_id] = {
+              quantity: 0,
+              total: 0,
+            };
+          }
+          productQuantities[item.product_id].quantity += item.quantity || 0;
+          productQuantities[item.product_id].total += Number(item.price || 0) * (item.quantity || 0);
+        });
+      });
+
+      const topProducts = await Promise.all(
+        Object.entries(productQuantities)
+          .map(async ([productId, stats]) => {
+            const product = await getProductById(productId);
+            return {
+              productId,
+              name: product?.name || 'Produto Removido',
+              quantity: stats.quantity,
+              total: stats.total,
+            };
+          })
+      );
+
+      topProducts.sort((a, b) => b.quantity - a.quantity);
+
+      const totalWarrantyMonths = receiptsData.reduce(
+        (acc, r) => acc + (r.warranty_duration_months || 0),
+        0
+      );
+
+      const averageWarrantyMonths = receiptsData.length > 0 
+        ? totalWarrantyMonths / receiptsData.length 
+        : 0;
+
+      let totalCost = 0;
+      let totalProfit = 0;
+      receiptsData.forEach((receipt) => {
+        const items = (receipt.receipt_items as ReceiptItem[]) || [];
+        items.forEach((item) => {
+          const product = products.find(p => p.id === item.product_id);
+          let cost;
+          if (item.type === 'seminovo' && item.manual_cost !== undefined) {
+            cost = Number(item.manual_cost) * item.quantity;
+          } else {
+            cost = product ? Number(product.default_price) * item.quantity : 0;
+          }
+          const sale = item.price * item.quantity;
+          totalCost += cost;
+          totalProfit += (sale - cost);
+        });
+      });
+
+      return {
+        period: `${format(start, 'dd/MM/yyyy')} - ${format(end, 'dd/MM/yyyy')}`,
+        totalReceipts: receiptsData.length,
+        totalAmount,
+        paymentMethodTotals,
+        topProducts: topProducts.slice(0, 10),
+        averageWarrantyMonths,
+        totalCost,
+        totalProfit,
+      };
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      throw error;
+    }
   };
 
   const getExpiringWarranties = async (days: number) => {
