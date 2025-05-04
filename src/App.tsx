@@ -28,7 +28,7 @@ function Footer() {
         <p>
           © 2025 True Iphones. Todos os direitos reservados. Criado por{' '}
           <a 
-            href="https://earnest-semolina-e73fd0.netlify.app/"
+            href="https://portfoliopagecore.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:text-blue-800 transition-colors duration-200 underline"
