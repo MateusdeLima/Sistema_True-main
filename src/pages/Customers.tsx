@@ -14,6 +14,9 @@ function Customers() {
     phone: '',
     cpf: ''
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filteredCustomers = searchQuery ? searchCustomers(searchQuery) : customers;
 
@@ -72,18 +75,24 @@ function Customers() {
     setShowAddModal(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
+    setCustomerToDelete(id);
+    setShowDeleteModal(true);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
     try {
-    if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
-        await deleteCustomer(id);
+      await deleteCustomer(customerToDelete);
       toast.success('Cliente excluído com sucesso!');
-      }
+      setShowDeleteModal(false);
+      setCustomerToDelete(null);
     } catch (error) {
-      console.error('Erro ao excluir cliente:', error);
       if (error instanceof Error && error.message.includes('recibos associados')) {
-        toast.error('Não é possível excluir este cliente pois existem recibos associados a ele. Exclua primeiro os recibos deste cliente.');
+        setDeleteError('Não é possível excluir este cliente pois existem recibos associados a ele. Exclua primeiro os recibos deste cliente.');
       } else {
-        toast.error('Erro ao excluir cliente. Por favor, tente novamente.');
+        setDeleteError('Erro ao excluir cliente. Por favor, tente novamente.');
       }
     }
   };
@@ -254,6 +263,26 @@ function Customers() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Confirmar exclusão</h3>
+            <p className="mb-4">Tem certeza que deseja excluir este cliente?</p>
+            {deleteError && <p className="text-red-600 mb-4">{deleteError}</p>}
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => { setShowDeleteModal(false); setCustomerToDelete(null); setDeleteError(null); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-md"
+              >Cancelar</button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md"
+              >Excluir</button>
+            </div>
           </div>
         </div>
       )}
