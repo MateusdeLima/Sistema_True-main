@@ -37,7 +37,7 @@ function Login() {
   />
 </div>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Sistema de Recibos e Comprovantes
+          Organização de vendas e Recibos
         </p>
       </div>
 
@@ -88,15 +88,6 @@ function Login() {
               >
                 {loading ? 'Entrando...' : 'Entrar'}
               </button>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-sm text-gray-600">
-                Credenciais de teste:
-              </p>
-              <ul className="mt-2 text-sm text-gray-500 space-y-1">
-                <li>Admin: admin@trueiphones.com / admin123</li>
-              </ul>
             </div>
           </form>
         </div>
