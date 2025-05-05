@@ -92,7 +92,16 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Quantidade de Vendas</p>
+              <p className="text-2xl font-semibold text-gray-900">{typeof report.totalReceipts === 'number' ? report.totalReceipts : 0}</p>
+            </div>
+            <Users className="w-8 h-8 text-blue-400" />
+          </div>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>

@@ -44,29 +44,26 @@ interface ReceiptFormData {
 
 type ProductField = 'productId' | 'quantity' | 'price' | 'imei' | 'type' | 'manualCost';
 
-// Adicione a interface para o tipo de retorno de getReceiptById
+// Ajuste a interface ReceiptData
 interface ReceiptData {
-  receipt: {
+  id: string;
+  customer_id: string;
+  total_amount: number;
+  payment_method: string;
+  installments: number;
+  installment_value: number;
+  created_at: string;
+  created_by: string;
+  employee_id: string;
+  warranty_duration_months: number | null;
+  warranty_expires_at: string | null;
+  receipt_items: Array<{
     id: string;
-    customer_id: string;
-    total_amount: number;
-    payment_method: string;
-    installments: number;
-    installment_value: number;
-    created_at: string;
-    created_by: string;
-    employee_id: string;
-    warranty_duration_months: number | null;
-    warranty_expires_at: string | null;
-    customers?: any;
-    receipt_items?: Array<{
-      id: string;
-      product_id: string;
-      quantity: number;
-      price: number;
-      imei?: string;
-    }>;
-  };
+    product_id: string;
+    quantity: number;
+    price: number;
+    imei?: string;
+  }>;
 }
 
 function Receipts() {
@@ -161,7 +158,7 @@ function Receipts() {
     const loadReceiptData = async () => {
       if (editingReceipt) {
         const receiptData = await getReceiptById(editingReceipt.id) as unknown as ReceiptData;
-        if (receiptData && receiptData.receipt.receipt_items) {
+        if (receiptData && receiptData.receipt_items) {
           setFormData({
             ...initialFormData,
             customerId: editingReceipt.customer_id,
@@ -173,7 +170,7 @@ function Receipts() {
             },
             warrantyExpiresAt: editingReceipt.warranty_expires_at || '',
             date: new Date(editingReceipt.created_at).toISOString().split('T')[0],
-            items: receiptData.receipt.receipt_items.map((item: { product_id: string; quantity: number; price: number; imei?: string }) => ({
+            items: receiptData.receipt_items.map((item: { product_id: string; quantity: number; price: number; imei?: string }) => ({
               productId: item.product_id,
               quantity: item.quantity,
               price: item.price,
@@ -319,13 +316,13 @@ function Receipts() {
 
     // Buscar os itens do recibo do banco de dados
     const receiptData = await getReceiptById(receipt.id) as unknown as ReceiptData;
-    if (!receiptData || !receiptData.receipt.receipt_items) {
+    if (!receiptData || !receiptData.receipt_items) {
       toast.error('Não foi possível encontrar os itens do recibo');
       return;
     }
 
     // Mapear os itens incluindo o IMEI
-    const receiptProducts = receiptData.receipt.receipt_items.map((item: { product_id: string; quantity: number; price: number; imei?: string }) => ({
+    const receiptProducts = receiptData.receipt_items.map((item) => ({
       name: products.find(p => p.id === item.product_id)?.name || 'Produto',
       quantity: item.quantity,
       price: item.price,
