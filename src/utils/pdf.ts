@@ -22,7 +22,6 @@ async function loadWarrantyPdf() {
     }
     return await response.arrayBuffer();
   } catch (error) {
-    console.error('Erro ao carregar termo de garantia:', error);
     throw new Error('Não foi possível carregar o termo de garantia. Verifique se o arquivo existe na pasta public/documentos.');
   }
 }
@@ -43,7 +42,6 @@ async function loadLogoImage(): Promise<HTMLImageElement> {
       img.onload = () => resolve(img);
       
       img.onerror = () => {
-        console.log(`Tentativa falhou para: ${currentPath}, tentando próximo caminho...`);
         tryLoadImage(paths.slice(1));
       };
       
@@ -367,7 +365,6 @@ export async function generateReceiptPDF(
     doc.text('Obrigado por escolher a True Iphones!', pageWidth / 2, startY, { align: 'center' });
 
   } catch (error) {
-    console.error('Erro ao adicionar imagens ao PDF:', error);
     // Se falhar ao carregar a imagem, gerar recibo sem ela
     startY = generateBasicReceipt(doc, receipt, customerName, customerCpf, products, employeeName);
   }
@@ -390,7 +387,6 @@ export async function generateReceiptPDF(
     const warrantyPages = await pdfDoc.copyPages(warrantyDoc, warrantyDoc.getPageIndices());
     warrantyPages.forEach(page => pdfDoc.addPage(page));
   } catch (error) {
-    console.error('Erro ao adicionar termo de garantia:', error);
     throw new Error('Não foi possível adicionar o termo de garantia ao recibo. Verifique se o arquivo existe na pasta public/documentos.');
   }
 

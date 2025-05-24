@@ -59,7 +59,6 @@ function Customers() {
       setEditingCustomer(null);
       setFormData({ fullName: '', email: '', phone: '', cpf: '' });
     } catch (error) {
-      console.error('Erro ao salvar cliente:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar cliente');
     }
   };

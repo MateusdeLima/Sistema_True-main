@@ -46,17 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = async (userId: string) => {
     try {
-      console.log('Buscando usuário com ID:', userId);
-      
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-        console.error('Erro ao buscar usuário:', error);
-        // Se o usuário não existir na tabela users, vamos criá-lo
+      if (error) {
         if (error.code === 'PGRST116') {
           const authUserData = await supabase.auth.getUser();
           if (authUserData.data.user) {
@@ -75,7 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single();
 
             if (insertError) {
-              console.error('Erro ao criar usuário:', insertError);
               return;
             }
 
@@ -83,12 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
         }
-      return;
-    }
+      }
 
-    if (data) {
-        console.log('Usuário encontrado:', data);
-      setUser(data);
+      if (data) {
+        setUser(data);
       }
     } catch (error) {
       console.error('Erro geral ao buscar usuário:', error);
@@ -97,55 +90,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Tentando fazer login...');
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        console.error('Erro no signIn:', signInError);
         throw signInError;
       }
 
-      console.log('Login bem sucedido:', data);
-      
       if (data.user) {
         setAuthUser(data.user);
         await fetchUser(data.user.id);
       }
     } catch (error) {
-      console.error('Erro geral no login:', error);
       throw error;
     }
   };
 
   const signOut = async () => {
     try {
-    const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setAuthUser(null);
-    setUser(null);
+      setUser(null);
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
       throw error;
     }
   };
 
   const updateUserPreferences = async (userId: string, preferences: User['preferences']) => {
     try {
-    const { error } = await supabase
-      .from('users')
-      .update({ preferences })
-      .eq('id', userId);
+      const { error } = await supabase
+        .from('users')
+        .update({ preferences })
+        .eq('id', userId);
 
       if (error) throw error;
 
-    if (user?.id === userId) {
-      setUser((prev) => (prev ? { ...prev, preferences } : null));
+      if (user?.id === userId) {
+        setUser((prev) => (prev ? { ...prev, preferences } : null));
       }
     } catch (error) {
-      console.error('Erro ao atualizar preferências:', error);
       throw error;
     }
   };

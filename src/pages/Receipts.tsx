@@ -283,7 +283,6 @@ function Receipts() {
         }, 100);
       }
     } catch (error) {
-      console.error('Erro ao salvar recibo:', error);
       toast.error('Erro ao salvar recibo. Verifique se todos os campos obrigatórios foram preenchidos.');
     }
   };
@@ -324,8 +323,8 @@ function Receipts() {
     // Mapear os itens incluindo o IMEI
     const receiptProducts = receiptData.receipt_items.map((item) => ({
       name: products.find(p => p.id === item.product_id)?.name || 'Produto',
-      quantity: item.quantity,
-      price: item.price,
+        quantity: item.quantity,
+        price: item.price,
       imei: item.imei
     }));
 
@@ -352,9 +351,8 @@ function Receipts() {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success('PDF gerado com sucesso!');
+    toast.success('PDF gerado com sucesso!');
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
       toast.error('Erro ao gerar o PDF do recibo');
     }
   };
@@ -416,10 +414,10 @@ function Receipts() {
       }
     } else if (field === 'manualCost') {
       const cost = typeof value === 'string' ? parseFloat(value) : value;
-      newItems[index] = {
-        ...newItems[index],
+    newItems[index] = {
+      ...newItems[index],
         manualCost: cost
-      };
+    };
     }
     setFormData({ ...formData, items: newItems });
   };
@@ -529,9 +527,9 @@ function Receipts() {
                   Data: {new Date(receipt.created_at).toLocaleDateString('pt-BR')}
                 </p>
                 {isAdmin && (
-                  <p className="text-sm">
+                <p className="text-sm">
                     Valor de Custo: {formatCurrency(receipt.total_amount)}
-                  </p>
+                </p>
                 )}
                 <p className="text-sm">
                   Forma de Pagamento: {receipt.payment_method}
@@ -747,7 +745,7 @@ function Receipts() {
                       const baseDate = new Date(formData.date);
                       baseDate.setMonth(baseDate.getMonth() + months);
                       setFormData({
-                        ...formData,
+                      ...formData,
                         warranty: { durationMonths: months },
                         warrantyExpiresAt: months > 0 ? baseDate.toISOString().split('T')[0] : ''
                       });
@@ -822,15 +820,15 @@ function Receipts() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
-                          <input
-                            type="number"
-                            required
-                            min="1"
-                            value={product.quantity}
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          value={product.quantity}
                             onChange={e => handleProductChange(index, 'quantity', e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="Quantidade"
-                          />
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                          placeholder="Quantidade"
+                        />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">IMEI</label>
@@ -904,13 +902,13 @@ function Receipts() {
                             Adicionar Produto
                           </button>
                         ) : <span />}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveProduct(index)}
-                          className="p-2 text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveProduct(index)}
+                        className="p-2 text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                       </div>
                     </div>
                   ))}

@@ -19,7 +19,7 @@ type BaseReceiptItem = Database['public']['Tables']['receipt_items']['Row'];
 type Employee = Database['public']['Tables']['employees']['Row'];
 
 interface ReceiptItem extends BaseReceiptItem {
-  imei?: string;
+  imei: string | null;
   type?: 'novo' | 'seminovo';
   manual_cost?: number;
 }
@@ -38,6 +38,7 @@ interface Report {
   averageWarrantyMonths: number;
   totalCost: number;
   totalProfit: number;
+  totalNetProfit: number;
 }
 
 interface DataContextType {
@@ -75,6 +76,31 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+
+const CARD_FEES: Record<string, number> = {
+  'Débito': 0.0091,
+  'Crédito 1x': 0.0303,
+  'Crédito 2x': 0.0387,
+  'Crédito 3x': 0.0444,
+  'Crédito 4x': 0.0502,
+  'Crédito 5x': 0.0560,
+  'Crédito 6x': 0.0619,
+  'Crédito 7x': 0.0700,
+  'Crédito 8x': 0.0759,
+  'Crédito 9x': 0.0819,
+  'Crédito 10x': 0.0879,
+  'Crédito 11x': 0.0940,
+  'Crédito 12x': 0.1001,
+};
+
+function getCardFee(paymentMethod: string, installments: number): number {
+  if (paymentMethod.toLowerCase().includes('débito')) return CARD_FEES['Débito'];
+  if (paymentMethod.toLowerCase().includes('crédito')) {
+    const key = `Crédito ${installments}x`;
+    return CARD_FEES[key] || 0;
+  }
+  return 0;
+}
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -504,25 +530,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      // Log para debug
-      console.log('Período consultado:', {
-        start: new Date(startTimestamp * 1000).toISOString(),
-        end: new Date((endTimestamp + 86400) * 1000).toISOString(),
-        receiptsCount: periodReceipts?.length || 0
-      });
-
       const receiptsData = periodReceipts || [];
 
-      // Log dos recibos encontrados para debug
-      receiptsData.forEach(receipt => {
-        console.log('Recibo encontrado:', {
-          id: receipt.id,
-          created_at: receipt.created_at,
-          total: receipt.total_amount
-        });
-      });
-
-      // Resto do código permanece igual
       const totalAmount = receiptsData.reduce((acc, r) => {
         const items = (r.receipt_items as ReceiptItem[]) || [];
         return acc + items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -578,8 +587,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       let totalCost = 0;
       let totalProfit = 0;
+      let totalNetProfit = 0;
       receiptsData.forEach((receipt) => {
         const items = (receipt.receipt_items as ReceiptItem[]) || [];
+        let sale = 0;
+        let costSum = 0;
         items.forEach((item) => {
           const product = products.find(p => p.id === item.product_id);
           let cost;
@@ -588,10 +600,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           } else {
             cost = product ? Number(product.default_price) * item.quantity : 0;
           }
-          const sale = item.price * item.quantity;
-          totalCost += cost;
-          totalProfit += (sale - cost);
+          const itemSale = item.price * item.quantity;
+          costSum += cost;
+          sale += itemSale;
         });
+        totalCost += costSum;
+        const profit = sale - costSum;
+        totalProfit += profit;
+        // Descontar taxa se for cartão/débito
+        const fee = getCardFee(receipt.payment_method, receipt.installments);
+        const netProfit = profit - (sale * fee);
+        totalNetProfit += netProfit;
       });
 
       return {
@@ -603,6 +622,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         averageWarrantyMonths,
         totalCost,
         totalProfit,
+        totalNetProfit,
       };
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);

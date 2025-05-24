@@ -132,6 +132,16 @@ function Dashboard() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm font-medium text-gray-600">Lucro Líquido</p>
+              <p className="text-2xl font-semibold text-gray-900">{formatCurrency(Number(report.totalNetProfit ?? 0))}</p>
+              <p className="text-xs text-gray-500 mt-1">Lucro líquido descontando taxas de cartão/débito.</p>
+            </div>
+            <BarChart2 className="w-8 h-8 text-emerald-600" />
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Média de Garantia</p>
               <p className="text-2xl font-semibold text-gray-900">{Number(report.averageWarrantyMonths ?? 0).toFixed(1)} meses</p>
             </div>

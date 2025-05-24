@@ -3,13 +3,11 @@ import { ptBR } from 'date-fns/locale';
 
 export async function sendEmail(to: string, subject: string, body: string) {
   // Simulated email sending
-  console.log(`Sending email to ${to}:`, { subject, body });
   return Promise.resolve();
 }
 
 export async function sendWhatsApp(to: string, message: string) {
   // Simulated WhatsApp message sending
-  console.log(`Sending WhatsApp message to ${to}:`, message);
   return Promise.resolve();
 }
 

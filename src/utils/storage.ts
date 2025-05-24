@@ -89,7 +89,6 @@ export async function deleteFile(filePath: string, folder: string = 'receipts'):
 
     return true;
   } catch (error) {
-    console.error('Erro ao deletar arquivo:', error);
     return false;
   }
 }
@@ -107,7 +106,6 @@ export async function listFiles(folder: string = 'receipts'): Promise<string[]> 
 
     return data.map(file => file.name);
   } catch (error) {
-    console.error('Erro ao listar arquivos:', error);
     return [];
   }
 } 
