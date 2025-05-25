@@ -6,6 +6,7 @@ import { generateReceiptPDF } from '../utils/pdf';
 import toast from 'react-hot-toast';
 import { Database } from '../types/database.types';
 import { useAuth } from '../contexts/AuthContext';
+import { getCardFee } from '../contexts/DataContext';
 
 type Receipt = Database['public']['Tables']['receipts']['Row'];
 type ReceiptItem = Database['public']['Tables']['receipt_items']['Row'] & {
@@ -489,6 +490,34 @@ function Receipts() {
         {filteredReceipts.map((receipt: Receipt) => {
           const customer = memoizedGetCustomerById(receipt.customer_id);
           const employee = memoizedGetEmployeeById(receipt.employee_id);
+          // Calcular lucro líquido se for admin e cartão
+          let netProfit: number | null = null;
+          if (
+            isAdmin &&
+            (receipt.payment_method.toLowerCase().includes('cartão de crédito') ||
+              receipt.payment_method.toLowerCase().includes('cartão de débito')) &&
+            receipt.receipt_items &&
+            receipt.receipt_items.length > 0
+          ) {
+            let sale = 0;
+            let costSum = 0;
+            receipt.receipt_items.forEach((item: any) => {
+              let cost;
+              if (item.type === 'seminovo' && item.manual_cost !== undefined) {
+                cost = Number(item.manual_cost) * item.quantity;
+              } else {
+                // Buscar o produto pelo id
+                const product = products.find((p) => p.id === item.product_id);
+                cost = product ? Number(product.default_price) * item.quantity : 0;
+              }
+              const itemSale = item.price * item.quantity;
+              costSum += cost;
+              sale += itemSale;
+            });
+            const profit = sale - costSum;
+            const fee = getCardFee(receipt.payment_method, receipt.installments);
+            netProfit = profit - sale * fee;
+          }
           return (
             <div key={receipt.id} className="border p-4 rounded shadow">
               <div className="flex justify-between items-start mb-2">
@@ -527,9 +556,17 @@ function Receipts() {
                   Data: {new Date(receipt.created_at).toLocaleDateString('pt-BR')}
                 </p>
                 {isAdmin && (
-                <p className="text-sm">
-                    Valor de Custo: {formatCurrency(receipt.total_amount)}
-                </p>
+                  <>
+                    <p className="text-sm">
+                      Valor de Custo: {formatCurrency(receipt.total_amount)}
+                    </p>
+                    {/* Lucro líquido para cartão/débito */}
+                    {netProfit !== null && (
+                      <p className="text-sm text-green-700 font-semibold">
+                        Lucro Líquido: {formatCurrency(netProfit)}
+                      </p>
+                    )}
+                  </>
                 )}
                 <p className="text-sm">
                   Forma de Pagamento: {receipt.payment_method}

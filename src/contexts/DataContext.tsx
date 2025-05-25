@@ -93,7 +93,7 @@ const CARD_FEES: Record<string, number> = {
   'Crédito 12x': 0.1001,
 };
 
-function getCardFee(paymentMethod: string, installments: number): number {
+export function getCardFee(paymentMethod: string, installments: number): number {
   if (paymentMethod.toLowerCase().includes('débito')) return CARD_FEES['Débito'];
   if (paymentMethod.toLowerCase().includes('crédito')) {
     const key = `Crédito ${installments}x`;
