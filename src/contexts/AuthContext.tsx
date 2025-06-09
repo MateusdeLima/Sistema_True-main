@@ -46,13 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-      if (error) {
+    if (error) {
         if (error.code === 'PGRST116') {
           const authUserData = await supabase.auth.getUser();
           if (authUserData.data.user) {
@@ -71,17 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single();
 
             if (insertError) {
-              return;
+      return;
             }
 
             setUser(insertedUser);
             return;
           }
         }
-      }
+    }
 
-      if (data) {
-        setUser(data);
+    if (data) {
+      setUser(data);
       }
     } catch (error) {
       console.error('Erro geral ao buscar usuário:', error);
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (signInError) {
         throw signInError;
       }
-
+      
       if (data.user) {
         setAuthUser(data.user);
         await fetchUser(data.user.id);
@@ -110,10 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setAuthUser(null);
-      setUser(null);
+    setUser(null);
     } catch (error) {
       throw error;
     }
@@ -121,15 +121,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserPreferences = async (userId: string, preferences: User['preferences']) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ preferences })
-        .eq('id', userId);
+    const { error } = await supabase
+      .from('users')
+      .update({ preferences })
+      .eq('id', userId);
 
       if (error) throw error;
 
-      if (user?.id === userId) {
-        setUser((prev) => (prev ? { ...prev, preferences } : null));
+    if (user?.id === userId) {
+      setUser((prev) => (prev ? { ...prev, preferences } : null));
       }
     } catch (error) {
       throw error;

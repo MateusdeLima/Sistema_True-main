@@ -162,11 +162,11 @@ function Dashboard() {
           <div className="space-y-4">
             {report.paymentMethodTotals && typeof report.paymentMethodTotals === 'object' &&
               Object.entries(report.paymentMethodTotals).map(([method, total]) => (
-                <div key={method} className="flex justify-between items-center">
-                  <span className="text-gray-600">{method}</span>
-                  <span className="font-semibold">{formatCurrency(total)}</span>
-                </div>
-              ))}
+              <div key={method} className="flex justify-between items-center">
+                <span className="text-gray-600">{method}</span>
+                <span className="font-semibold">{formatCurrency(total)}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

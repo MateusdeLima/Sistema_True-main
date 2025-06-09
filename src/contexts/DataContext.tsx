@@ -217,12 +217,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data, error } = await supabase
-        .from('customers')
+      .from('customers')
         .insert([customerData])
         .select()
         .single();
 
-      if (error) throw error;
+    if (error) throw error;
       if (data) {
         setCustomers(prev => [...prev, data]);
       }
@@ -235,13 +235,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const updateCustomer = async (id: string, data: Partial<Customer>) => {
     try {
       const { data: updatedCustomer, error } = await supabase
-        .from('customers')
+      .from('customers')
         .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+    if (error) throw error;
       if (updatedCustomer) {
         setCustomers(prev => prev.map(c => c.id === id ? updatedCustomer : c));
       }
@@ -266,12 +266,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Se não houver recibos, prosseguir com a exclusão
-      const { error } = await supabase
-        .from('customers')
+    const { error } = await supabase
+      .from('customers')
         .delete()
-        .eq('id', id);
+      .eq('id', id);
 
-      if (error) throw error;
+    if (error) throw error;
       setCustomers(prev => prev.filter(c => c.id !== id));
     } catch (error) {
       console.error('Erro ao deletar cliente:', error);
@@ -341,8 +341,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (!user) throw new Error('Usuário não autenticado');
 
       // Criar o recibo
-      const { data: receipt, error: receiptError } = await supabase
-        .from('receipts')
+    const { data: receipt, error: receiptError } = await supabase
+      .from('receipts')
         .insert([{
           customer_id: receiptData.customer_id,
           total_amount: receiptData.total_amount,
@@ -354,14 +354,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           employee_id: receiptData.employee_id,
           created_by: user.id
         }])
-        .select()
-        .single();
+      .select()
+      .single();
 
-      if (receiptError) throw receiptError;
+    if (receiptError) throw receiptError;
 
       // Adicionar os itens do recibo com IMEI
       const { data: items, error: itemsError } = await supabase
-        .from('receipt_items')
+      .from('receipt_items')
         .insert(
           receiptItems.map(item => ({
             receipt_id: receipt.id,
@@ -409,12 +409,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteReceipt = async (id: string) => {
     try {
       // Primeiro, deletar o recibo (os itens serão deletados automaticamente devido ao ON DELETE CASCADE)
-      const { error } = await supabase
-        .from('receipts')
+    const { error } = await supabase
+      .from('receipts')
         .delete()
-        .eq('id', id);
+      .eq('id', id);
 
-      if (error) throw error;
+    if (error) throw error;
 
       // Atualizar o estado local removendo o recibo
       setReceipts(prev => prev.filter(r => r.id !== id));
@@ -433,7 +433,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const getReceiptById = async (id: string) => {
     try {
       const { data: receiptData, error: receiptError } = await supabase
-        .from('receipts')
+      .from('receipts')
         .select(`
           *,
           customers (
@@ -458,8 +458,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             )
           )
         `)
-        .eq('id', id)
-        .single();
+      .eq('id', id)
+      .single();
 
       if (receiptError) throw receiptError;
       return receiptData;
@@ -501,18 +501,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const generateReport = async (startDate: string, endDate: string): Promise<Report> => {
     try {
       // Converter as datas para timestamps UNIX (em segundos)
-      const start = new Date(startDate);
+    const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
       const startTimestamp = Math.floor(start.getTime() / 1000);
 
-      const end = new Date(endDate);
+    const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       const endTimestamp = Math.floor(end.getTime() / 1000);
 
-      const { data: periodReceipts, error } = await supabase
-        .from('receipts')
-        .select(`
-          *,
+    const { data: periodReceipts, error } = await supabase
+      .from('receipts')
+      .select(`
+        *,
           receipt_items (
             id,
             product_id,
@@ -521,7 +521,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             type,
             manual_cost
           )
-        `)
+      `)
         .gte('created_at', new Date(startTimestamp * 1000).toISOString())
         .lt('created_at', new Date((endTimestamp + 86400) * 1000).toISOString());
 
@@ -530,14 +530,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      const receiptsData = periodReceipts || [];
+    const receiptsData = periodReceipts || [];
 
       const totalAmount = receiptsData.reduce((acc, r) => {
         const items = (r.receipt_items as ReceiptItem[]) || [];
         return acc + items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       }, 0);
 
-      const paymentMethodTotals: Record<string, number> = {};
+    const paymentMethodTotals: Record<string, number> = {};
       receiptsData.forEach((receipt) => {
         const paymentMethod = receipt.payment_method || 'Não especificado';
         const items = (receipt.receipt_items as ReceiptItem[]) || [];
@@ -545,45 +545,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         paymentMethodTotals[paymentMethod] = (paymentMethodTotals[paymentMethod] || 0) + valorVenda;
       });
 
-      const productQuantities: Record<string, { quantity: number; total: number }> = {};
+    const productQuantities: Record<string, { quantity: number; total: number }> = {};
 
-      receiptsData.forEach((receipt) => {
-        const items = (receipt.receipt_items as ReceiptItem[]) || [];
-        items.forEach((item) => {
-          if (!productQuantities[item.product_id]) {
-            productQuantities[item.product_id] = {
-              quantity: 0,
-              total: 0,
-            };
-          }
-          productQuantities[item.product_id].quantity += item.quantity || 0;
-          productQuantities[item.product_id].total += Number(item.price || 0) * (item.quantity || 0);
-        });
+    receiptsData.forEach((receipt) => {
+      const items = (receipt.receipt_items as ReceiptItem[]) || [];
+      items.forEach((item) => {
+        if (!productQuantities[item.product_id]) {
+          productQuantities[item.product_id] = {
+            quantity: 0,
+            total: 0,
+          };
+        }
+        productQuantities[item.product_id].quantity += item.quantity || 0;
+        productQuantities[item.product_id].total += Number(item.price || 0) * (item.quantity || 0);
       });
+    });
 
-      const topProducts = await Promise.all(
-        Object.entries(productQuantities)
-          .map(async ([productId, stats]) => {
-            const product = await getProductById(productId);
-            return {
-              productId,
-              name: product?.name || 'Produto Removido',
-              quantity: stats.quantity,
-              total: stats.total,
-            };
-          })
-      );
+    const topProducts = await Promise.all(
+      Object.entries(productQuantities)
+        .map(async ([productId, stats]) => {
+          const product = await getProductById(productId);
+          return {
+            productId,
+            name: product?.name || 'Produto Removido',
+            quantity: stats.quantity,
+            total: stats.total,
+          };
+        })
+    );
 
-      topProducts.sort((a, b) => b.quantity - a.quantity);
+    topProducts.sort((a, b) => b.quantity - a.quantity);
 
-      const totalWarrantyMonths = receiptsData.reduce(
-        (acc, r) => acc + (r.warranty_duration_months || 0),
-        0
-      );
+    const totalWarrantyMonths = receiptsData.reduce(
+      (acc, r) => acc + (r.warranty_duration_months || 0),
+      0
+    );
 
-      const averageWarrantyMonths = receiptsData.length > 0 
-        ? totalWarrantyMonths / receiptsData.length 
-        : 0;
+    const averageWarrantyMonths = receiptsData.length > 0 
+      ? totalWarrantyMonths / receiptsData.length 
+      : 0;
 
       let totalCost = 0;
       let totalProfit = 0;
@@ -613,17 +613,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         totalNetProfit += netProfit;
       });
 
-      return {
-        period: `${format(start, 'dd/MM/yyyy')} - ${format(end, 'dd/MM/yyyy')}`,
-        totalReceipts: receiptsData.length,
-        totalAmount,
-        paymentMethodTotals,
-        topProducts: topProducts.slice(0, 10),
-        averageWarrantyMonths,
+    return {
+      period: `${format(start, 'dd/MM/yyyy')} - ${format(end, 'dd/MM/yyyy')}`,
+      totalReceipts: receiptsData.length,
+      totalAmount,
+      paymentMethodTotals,
+      topProducts: topProducts.slice(0, 10),
+      averageWarrantyMonths,
         totalCost,
         totalProfit,
         totalNetProfit,
-      };
+    };
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
       throw error;
@@ -666,11 +666,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addEmployee = async (employee: Omit<Employee, 'id'>) => {
-    const { data, error } = await supabase
-      .from('employees')
+      const { data, error } = await supabase
+        .from('employees')
       .insert([employee])
-      .select()
-      .single();
+        .select()
+        .single();
 
     if (error) {
       console.error('Error adding employee:', error);
@@ -682,7 +682,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
     const { data, error } = await supabase
-      .from('employees')
+        .from('employees')
       .update(updates)
       .eq('id', id)
       .select()

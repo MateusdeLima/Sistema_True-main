@@ -557,9 +557,9 @@ function Receipts() {
                 </p>
                 {isAdmin && (
                   <>
-                    <p className="text-sm">
+                <p className="text-sm">
                       Valor de Custo: {formatCurrency(receipt.total_amount)}
-                    </p>
+                </p>
                     {/* Lucro líquido para cartão/débito */}
                     {netProfit !== null && (
                       <p className="text-sm text-green-700 font-semibold">
@@ -667,7 +667,7 @@ function Receipts() {
                             >
                               {c.full_name}
                             </div>
-                          ))}
+                    ))}
                         </div>
                       </div>
                     )}
@@ -715,7 +715,7 @@ function Receipts() {
                             >
                               {e.full_name}
                             </div>
-                          ))}
+                    ))}
                         </div>
                       </div>
                     )}
@@ -848,7 +848,7 @@ function Receipts() {
                                 >
                                   {p.name} - {p.code}{isAdmin ? ` - ${formatCurrency(p.default_price)}` : ''}
                                 </div>
-                              ))}
+                          ))}
                             </div>
                           </div>
                         )}
